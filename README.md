@@ -1,6 +1,10 @@
 # 🧏‍♂️ SignSync
 
 Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision and speech.
+![SignSync in action](assets/demo.gif)
+<p align="center">
+  <img src="assets/demo.gif" width="300"/>
+</p>
 
 ## 🚀 Features
 - 📷 Live camera feed for sign detection
