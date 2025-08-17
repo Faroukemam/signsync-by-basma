@@ -76,7 +76,7 @@ class _basketState extends State<basket> {
               backgroundColor: Color(0xff8aa1cd),
               child: CircleAvatar(
                 radius: 28,
-                backgroundImage: AssetImage('images/background02.jpeg'),
+                backgroundImage: AssetImage('assets/images/background02.jpeg'),
               ),
             ),
             Spacer(flex: 1),
