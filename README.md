@@ -23,8 +23,8 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 
 ## 👥 Contributors
 - Farouk Emam
-- Omar
+- Omar Ashraf 
 - Karim
-- Islam
+- Islam Wagih 
 - Karim 👀
 
