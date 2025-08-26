@@ -1,7 +1,7 @@
 //import 'package:flutter/cupertino.dart'
 import 'package:flutter/material.dart';
-import 'package:signsync/screens/homepage.dart';
 import 'package:signsync/screens/basketcounter.dart';
+import 'package:signsync/screens/SplashScreen.dart';
 
 void main() {
   runApp(tokuApp());
@@ -15,7 +15,7 @@ class tokuApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SignSync',
-      home: HomePage(),
+      home: SplashScreen(),
     );
   }
 }
