@@ -3,7 +3,7 @@
 Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision and speech.
 
 <p align="center">
-  <img src="assets/demo.gif" width="300"/>
+  <img src=".github/assets/demo.gif" width="300"/>
 </p>
 
 ## 🚀 Features
