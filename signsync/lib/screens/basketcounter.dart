@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 Text mass = const Text(
   'Points Counter!!',
   style: TextStyle(
-    fontSize: 33,
+    fontSize: 12,
     color: Colors.white,
     fontFamily: 'Pacifico',
     //fontWeight: FontWeight.bold,
   ),
+  overflow: TextOverflow.ellipsis, // avoids overflow
+  maxLines: 1,
 );
 
 enum PointState { point, twoPoints, threePoints, reset }
@@ -72,15 +74,25 @@ class _basketState extends State<basket> {
           children: [
             Spacer(flex: 1),
             CircleAvatar(
-              radius: 30,
+              radius: 25,
               backgroundColor: Color(0xff8aa1cd),
               child: CircleAvatar(
-                radius: 28,
+                radius: 22,
                 backgroundImage: AssetImage('assets/images/background02.jpeg'),
               ),
             ),
             Spacer(flex: 1),
-            mass,
+            Text(
+              'Points Counter!!',
+              style: TextStyle(
+                fontSize: 23,
+                color: Colors.white,
+                fontFamily: 'Pacifico',
+                //fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis, // avoids overflow
+              maxLines: 1,
+            ),
             Spacer(flex: 1),
           ],
         ),
