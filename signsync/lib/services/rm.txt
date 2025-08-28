@@ -1,0 +1,142 @@
+/*
+/// A reusable API service for handling all HTTP requests.
+class ApiService {
+  final String baseUrl;
+
+  ApiService({required this.baseUrl});
+
+  /// -------------------------------
+  /// GET Request
+  /// -------------------------------
+  Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("GET request failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// POST Request
+  /// -------------------------------
+  Future<dynamic> post(
+    String endpoint, {
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers ?? {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("POST request failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// PUT Request
+  /// -------------------------------
+  Future<dynamic> put(
+    String endpoint, {
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers ?? {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("PUT request failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// PATCH Request
+  /// -------------------------------
+  Future<dynamic> patch(
+    String endpoint, {
+    Map<String, String>? headers,
+    dynamic body,
+  }) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers ?? {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("PATCH request failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// DELETE Request
+  /// -------------------------------
+  Future<dynamic> delete(
+    String endpoint, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+      );
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("DELETE request failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// FILE UPLOAD (Multipart Request)
+  /// -------------------------------
+  Future<dynamic> uploadFile(
+    String endpoint,
+    String filePath, {
+    String fieldName = 'file',
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl$endpoint'),
+      );
+
+      if (headers != null) request.headers.addAll(headers);
+
+      request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw Exception("File upload failed: $e");
+    }
+  }
+
+  /// -------------------------------
+  /// RESPONSE HANDLER
+  /// -------------------------------
+  dynamic _handleResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Request failed: ${response.statusCode} → ${response.body}",
+      );
+    }
+  }
+}
+*/

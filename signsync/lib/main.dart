@@ -1,3 +1,4 @@
+/*
 //import 'package:flutter/cupertino.dart'
 import 'package:flutter/material.dart';
 import 'package:signsync/screens/basketcounter.dart';
@@ -525,3 +526,39 @@ class sign extends StatelessWidget {
               width: 305,
               ),
             ),*/
+
+            */
+
+// lib/main.dart
+import 'package:flutter/material.dart';
+import 'services/api_service.dart';
+import 'screens/TestScreen.dart';
+
+void main() {
+  runApp(const SignSyncApp());
+}
+
+class SignSyncApp extends StatelessWidget {
+  const SignSyncApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final api = ApiService(
+      baseUrl: 'http://192.168.1.7:1880', // your Node-RED base URL
+      defaultHeaders: {
+        'Content-Type': 'application/json',
+        // 'Authorization': 'Bearer <token>',
+      },
+    );
+
+    return MaterialApp(
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
+      home: ParagraphSenderScreen(
+        api: api,
+        endpoint: '/nlp/infer', // change to your flow path
+        // extraHeaders: {'X-App': 'SignSync'},
+        // queryParams: {'sessionId': 'abc123'},
+      ),
+    );
+  }
+}
