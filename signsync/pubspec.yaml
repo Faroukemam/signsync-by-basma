@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.10.5+5
+  # Add ONNX Runtime when you are ready to run the ONNX model on-device.
+  # Uncomment the next line and run `flutter pub get`.
+  # onnxruntime: ^1.17.0
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -38,6 +41,7 @@ dependencies:
   flutter_native_splash: ^2.4.6
   http: ^1.5.0
   mime: ^2.0.0
+  onnxruntime: ^1.4.1
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +80,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/models/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -98,5 +103,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
 

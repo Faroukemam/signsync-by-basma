@@ -6,6 +6,7 @@ import 'package:signsync/screens/camera_screen_f&r.dart';
 import 'package:signsync/screens/cambot.dart';
 import 'package:signsync/screens/cambot1.dart';
 import 'package:signsync/screens/chat_screen.dart';
+import 'package:signsync/screens/face_mask_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -78,6 +79,19 @@ class HomePage extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) =>
                       const ChatScreen(title: 'Support', subtitle: 'online'),
+                ),
+              );
+            },
+          ),
+          cat(
+            text: 'Face Mask Detector',
+            color: Color(0xff1B9AAA),
+            OnTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  // Use simulated detections until ONNX engine is implemented.
+                  builder: (context) => const FaceMaskScreen(),
                 ),
               );
             },

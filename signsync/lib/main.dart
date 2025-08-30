@@ -25,10 +25,8 @@ class SignSyncApp extends StatelessWidget {
       routes: {
         '/home': (context) => const HomePage(),
         // Simple demo route to the chat screen with default contact info.
-        '/chat': (context) => const ChatScreen(
-              title: 'Support',
-              subtitle: 'online',
-            ),
+        '/chat': (context) =>
+            const ChatScreen(title: 'Support', subtitle: 'online'),
       },
     );
   }
@@ -41,4 +39,3 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const SignSyncApp();
 }
-
