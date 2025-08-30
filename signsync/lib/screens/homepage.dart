@@ -5,6 +5,7 @@ import 'package:signsync/screens/camera_screen.dart';
 import 'package:signsync/screens/camera_screen_f&r.dart';
 import 'package:signsync/screens/cambot.dart';
 import 'package:signsync/screens/cambot1.dart';
+import 'package:signsync/screens/chat_screen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -68,6 +69,19 @@ class HomePage extends StatelessWidget {
             },
           ),
           cat(text: 'Speech To Sign', color: Color(0xffF58549)),
+          cat(
+            text: 'Chat Demo',
+            color: Color(0xff4ECDC4),
+            OnTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const ChatScreen(title: 'Support', subtitle: 'online'),
+                ),
+              );
+            },
+          ),
           //cat(text: 'Phrases', color: Colors.purple),
           //cat(text: 'farouk', color: Colors.redAccent),
         ],
