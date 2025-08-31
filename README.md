@@ -3,7 +3,7 @@
 Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision and speech.
 
 <p align="center">
-  <img src=".assets/brif.gif" width="500"/>
+  <img src=".assets/brif.gif" width="1000"/>
 </p>
 
 ## 🚀 Features
@@ -18,8 +18,9 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 - Firebase (Realtime DB + Storage)
 - Node-RED (AI pipeline)
 - Python
--
--
+- Deeplearning
+- MediaPipe
+- Hugging Face
 
 <p align="center">
   <img src=".assets/demo.gif" width="300"/>
