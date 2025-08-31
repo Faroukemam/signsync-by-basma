@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+
+		<!-- Camera and microphone permission descriptions for iOS -->
+		<key>NSCameraUsageDescription</key>
+		<string>This app uses the camera for live detection.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app may use the microphone for future features.</string>
 	</dict>
 </plist>

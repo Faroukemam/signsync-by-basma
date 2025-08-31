@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:signsync/components/coustomcontainer.dart';
+import 'package:signsync/screens/TestScreen.dart';
 import 'package:signsync/screens/basketcounter.dart';
-import 'package:signsync/screens/camera_screen.dart';
 import 'package:signsync/screens/camera_screen_f&r.dart';
-import 'package:signsync/screens/cambot.dart';
-import 'package:signsync/screens/cambot1.dart';
 import 'package:signsync/screens/chat_screen.dart';
 import 'package:signsync/screens/face_mask_screen.dart';
+import 'package:signsync/services/api_service.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -90,10 +89,31 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  // Use simulated detections until ONNX engine is implemented.
-                  builder: (context) => const FaceMaskScreen(),
+                  // Pass your ONNX model asset. The engine currently loads
+                  // the asset and returns no detections until inference is
+                  // implemented.
+                  builder: (context) => const FaceMaskScreen(
+                    modelAssetPath: 'assets/models/model.quant.onnx',
+                  ),
                 ),
               );
+            },
+          ),
+          cat(
+            text: "Text to Sign",
+            color: Color(0xff788789),
+            OnTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return ParagraphSenderScreen(
+                      api: ApiService(baseUrl: 'http://192.168.1.100:1880'),
+                    );
+                  },
+                ),
+              );
+              print('num tapped');
             },
           ),
           //cat(text: 'Phrases', color: Colors.purple),

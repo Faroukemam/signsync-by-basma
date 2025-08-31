@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:signsync/face_mask/face_mask_engine.dart';
-import 'package:signsync/face_mask/simulated_face_mask_engine.dart';
+// Note: This widget now requires a concrete engine; no simulation fallback.
 
 class FaceMaskDetectorWidget extends StatefulWidget {
-  final FaceMaskEngine? engine;
+  final FaceMaskEngine engine;
   final bool preferFrontCamera;
   final Duration throttle; // time between inferences
   /// How the camera preview should fit its box (and how the overlay scales).
@@ -15,7 +15,7 @@ class FaceMaskDetectorWidget extends StatefulWidget {
 
   const FaceMaskDetectorWidget({
     super.key,
-    this.engine,
+    required this.engine,
     this.preferFrontCamera = true,
     this.throttle = const Duration(milliseconds: 250),
     this.fit = BoxFit.contain,
@@ -34,19 +34,28 @@ class _FaceMaskDetectorWidgetState extends State<FaceMaskDetectorWidget> {
   bool _busy = false;
   DateTime _lastRun = DateTime.fromMillisecondsSinceEpoch(0);
 
-  late final FaceMaskEngine _engine;
+  late FaceMaskEngine _engine;
   List<FaceMaskResult> _results = const [];
 
   @override
   void initState() {
     super.initState();
-    _engine = widget.engine ?? SimulatedFaceMaskEngine();
+    _engine = widget.engine;
     _setup();
   }
 
   Future<void> _setup() async {
     try {
       await _engine.load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Engine load error: $e')),
+      );
+      return; // abort setup
+    }
+
+    try {
       _cameras = await availableCameras();
       final cam = _selectCamera(_cameras, widget.preferFrontCamera);
       _controller = CameraController(cam, ResolutionPreset.medium, enableAudio: false);
@@ -57,7 +66,7 @@ class _FaceMaskDetectorWidgetState extends State<FaceMaskDetectorWidget> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Camera/engine error: $e')),
+        SnackBar(content: Text('Camera error: $e')),
       );
     }
   }
