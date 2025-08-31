@@ -3,7 +3,7 @@
 Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision and speech.
 
 <p align="center">
-  <img src=".assets/demo.gif" width="300"/>
+  <img src=".assets/brif.gif" width="300"/>
 </p>
 
 ## 🚀 Features
@@ -20,6 +20,10 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 - Python
 -
 -
+
+<p align="center">
+  <img src=".assets/demo.gif" width="300"/>
+</p>
 
 ## 👥 Contributors
 - Farouk Emam

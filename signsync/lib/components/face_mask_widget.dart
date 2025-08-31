@@ -241,19 +241,62 @@ class _DetectionsPainter extends CustomPainter {
   }
 }
 
-class _Badge extends StatelessWidget {
+class _Badge extends StatefulWidget {
   final String text;
   const _Badge({required this.text});
 
   @override
+  State<_Badge> createState() => _BadgeState();
+}
+
+class _BadgeState extends State<_Badge> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.7, end: 1.2).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isLive = widget.text.toUpperCase() == 'LIVE';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.6),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isLive)
+            ScaleTransition(
+              scale: _pulse,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          if (isLive) const SizedBox(width: 6),
+          Text(widget.text, style: const TextStyle(color: Colors.white)),
+        ],
+      ),
     );
   }
 }
