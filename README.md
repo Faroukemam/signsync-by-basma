@@ -29,7 +29,7 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 ## 👥 Contributors
 - Farouk Emam
 - Omar Ashraf 
-- Karim
+- Karim Rashid
 - Islam Wagih 
 - Karim 👀
 
