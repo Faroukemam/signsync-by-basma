@@ -5,6 +5,7 @@ import 'dart:ui' show Rect;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:signsync/face_mask/face_mask_engine.dart';
 import 'package:onnxruntime/onnxruntime.dart' as ort;
+import 'dart:math' as math;
 
 /*
   ONNX Runtime Engine (Skeleton)
@@ -38,7 +39,9 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
   // Model/input config (tune to your model as needed)
   final int inputWidth;
   final int inputHeight;
-  final double scoreThreshold;
+  double scoreThreshold;
+  /// True if head layout is [cx,cy,w,h, obj?, class1..C]. Default true.
+  final bool hasObjectness;
   final Map<int, String>? classLabels; // optional mapping id -> label
 
   bool _loaded = false;
@@ -51,6 +54,7 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     this.inputWidth = 640,
     this.inputHeight = 640,
     this.scoreThreshold = 0.5,
+    this.hasObjectness = true,
     this.classLabels,
   });
 
@@ -87,17 +91,28 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     }
     if (_session == null) return const <FaceMaskResult>[];
 
-    // --- 1) Preprocess YUV420 -> model tensor (Float32, NHWC or NCHW) ---
+    // --- 1) Preprocess: YUV420 -> RGB -> letterbox to [inputWidth,inputHeight] ---
+    final srcW = image.width;
+    final srcH = image.height;
     final rgb = _yuv420ToRGB(image);
-    final resized = _resizeRGB(rgb, image.width, image.height, inputWidth, inputHeight);
-    final floatNHWC = _toFloatNHWC(resized, inputWidth, inputHeight, scale: 1 / 255.0);
+
+    // Letterbox resize keeping aspect ratio
+    final scale = math.min(inputWidth / srcW, inputHeight / srcH);
+    final newW = (srcW * scale).round();
+    final newH = (srcH * scale).round();
+    final padX = ((inputWidth - newW) / 2).floor();
+    final padY = ((inputHeight - newH) / 2).floor();
+
+    final resized = _resizeRGB(rgb, srcW, srcH, newW, newH);
+    final letterboxed = _padRGB(resized, newW, newH, inputWidth, inputHeight, padX, padY, fill: 114);
+    final floatNHWC = _toFloatNHWC(letterboxed, inputWidth, inputHeight, scale: 1 / 255.0);
     final floatNCHW = _toFloatNCHW(floatNHWC, inputWidth, inputHeight);
 
     final inputName = _inputs.first;
     final runOptions = ort.OrtRunOptions();
 
     List<ort.OrtValue?>? outputs;
-    // Try NHWC first, then NCHW.
+    // Try NHWC first, then NCHW (some exports keep channels-last).
     try {
       final inp = ort.OrtValueTensor.createTensorWithDataList(
         floatNHWC,
@@ -126,8 +141,17 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
       return const <FaceMaskResult>[];
     }
 
-    // --- 2) Decode outputs into [x1,y1,x2,y2,score,cls] rows ---
-    final dets = _decodeDetections(outputs);
+    // --- 2) Decode YOLO-style outputs into [x1,y1,x2,y2,score,cls] (pixels in src space) ---
+    final dets = _decodeYoloDetections(outputs,
+        imgW: srcW,
+        imgH: srcH,
+        inputW: inputWidth,
+        inputH: inputHeight,
+        padX: padX,
+        padY: padY,
+        scale: scale,
+        hasObjectness: hasObjectness,
+        scoreThresh: scoreThreshold);
     for (final o in outputs) {
       try {
         o?.release();
@@ -145,14 +169,11 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
       final cls = d[5].round();
       if (score < scoreThreshold) continue;
 
-      // Normalize if values look like pixels.
-      double nx1 = x1, ny1 = y1, nx2 = x2, ny2 = y2;
-      if (nx2 > 1.0 || ny2 > 1.0) {
-        nx1 /= inputWidth;
-        nx2 /= inputWidth;
-        ny1 /= inputHeight;
-        ny2 /= inputHeight;
-      }
+      // Normalize to source frame size
+      double nx1 = (x1 / srcW).clamp(0.0, 1.0);
+      double ny1 = (y1 / srcH).clamp(0.0, 1.0);
+      double nx2 = (x2 / srcW).clamp(0.0, 1.0);
+      double ny2 = (y2 / srcH).clamp(0.0, 1.0);
       final w = (nx2 - nx1).clamp(0.0, 1.0).toDouble();
       final h = (ny2 - ny1).clamp(0.0, 1.0).toDouble();
       final l = nx1.clamp(0.0, 1.0).toDouble();
@@ -238,6 +259,35 @@ Uint8List _resizeRGB(Uint8List src, int sw, int sh, int dw, int dh) {
   return dst;
 }
 
+// Place a smaller RGB image (w,h) into a larger canvas (W,H) with padding.
+Uint8List _padRGB(
+  Uint8List src,
+  int w,
+  int h,
+  int W,
+  int H,
+  int padX,
+  int padY, {
+  int fill = 114,
+}) {
+  final dst = Uint8List(W * H * 3);
+  for (int i = 0; i < dst.length; i += 3) {
+    dst[i] = fill;
+    dst[i + 1] = fill;
+    dst[i + 2] = fill;
+  }
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      final sIdx = (y * w + x) * 3;
+      final dIdx = ((y + padY) * W + (x + padX)) * 3;
+      dst[dIdx] = src[sIdx];
+      dst[dIdx + 1] = src[sIdx + 1];
+      dst[dIdx + 2] = src[sIdx + 2];
+    }
+  }
+  return dst;
+}
+
 // Convert HWC uint8 RGB to NHWC float32 with scaling and no mean/std
 List<double> _toFloatNHWC(Uint8List rgb, int w, int h, {double scale = 1.0}) {
   final out = List<double>.filled(w * h * 3, 0.0, growable: false);
@@ -278,68 +328,121 @@ List<double> _toFloatNCHW(List<double> nhwc, int w, int h) {
   return out;
 }
 
-// Attempt to decode detections from ORT outputs. Handles:
-// - Single tensor [N,6] or [1,N,6]: x1,y1,x2,y2,score,class
-// - Separate outputs: boxes [N,4], scores [N], classes [N]
-List<List<double>> _decodeDetections(List<ort.OrtValue?> outs) {
-  // Try single output first.
-  final o0 = outs[0];
-  if (o0 != null) {
-    final rows = _rows2D(o0.value);
-    if (rows.isNotEmpty && (rows.first.length >= 6)) {
-      return rows
-          .map((r) => [r[0].toDouble(), r[1].toDouble(), r[2].toDouble(), r[3].toDouble(), r[4].toDouble(), r[5].toDouble()])
-          .toList();
-    }
-  }
-
-  // Try to find boxes/scores/classes among outputs
-  List<List<double>> boxes = [];
-  List<double> scores = [];
-  List<double> classes = [];
-
+// Decode YOLO head [*, E, S] or [*, S, E] into pixel boxes in source image space.
+List<List<double>> _decodeYoloDetections(
+  List<ort.OrtValue?> outs, {
+  required int imgW,
+  required int imgH,
+  required int inputW,
+  required int inputH,
+  required int padX,
+  required int padY,
+  required double scale,
+  required bool hasObjectness,
+  required double scoreThresh,
+}) {
+  // 1) Find the main concatenated output: prefer the first output with a 2D matrix where
+  //    either rows == 67 or cols == 67 (E). Fallback to the largest 2D.
+  List<List<double>>? mat;
   for (final o in outs) {
     if (o == null) continue;
-    final shapeRows = _rows2D(o.value);
-    if (shapeRows.isNotEmpty) {
-      final cols = shapeRows.first.length;
-      if (cols == 4) {
-        boxes = shapeRows
-            .map((r) => [r[0].toDouble(), r[1].toDouble(), r[2].toDouble(), r[3].toDouble()])
-            .toList();
-        continue;
+    final rows = _rows2D(o.value);
+    if (rows.isEmpty) continue;
+    final r = rows.length;
+    final c = rows.first.length;
+    if (r == 67 || c == 67) {
+      mat = rows;
+      break;
+    }
+    // Also accept typical S (8400)
+    if (r == 8400 || c == 8400) {
+      mat = rows;
+      break;
+    }
+  }
+  // Fallback: take the first non-empty 2D
+  if (mat == null) {
+    for (final o in outs) {
+      if (o == null) continue;
+      final rows = _rows2D(o.value);
+      if (rows.isNotEmpty) { mat = rows; break; }
+    }
+  }
+  mat ??= const <List<double>>[];
+  if (mat.isEmpty) return const <List<double>>[];
+
+  // 2) Ensure shape is [S,E]
+  List<List<double>> pred;
+  final rowsN = mat.length;
+  final colsN = mat.first.length;
+  final bool rowsAreE = rowsN == 67; // typical for this model
+  if (rowsAreE) {
+    // transpose to [S,E]
+    pred = List.generate(colsN, (i) => List<double>.filled(rowsN, 0));
+    for (int r = 0; r < rowsN; r++) {
+      final row = mat[r];
+      for (int c = 0; c < colsN; c++) {
+        pred[c][r] = row[c].toDouble();
       }
     }
-    // 1D vector
-    final vec = _vector1D(o.value);
-    if (vec.isNotEmpty) {
-      // Heuristic: scores are [0..1], classes are integers-ish
-      final avg = vec.reduce((a, b) => a + b) / vec.length;
-      final isScore = avg >= 0.0 && avg <= 1.0;
-      if (isScore && scores.isEmpty) {
-        scores = vec;
-      } else if (classes.isEmpty) {
-        classes = vec;
-      }
-    }
+  } else {
+    pred = mat;
   }
 
-  final n = [boxes.length, scores.length, classes.length].reduce((a, b) => a > b ? a : b);
-  final out = <List<double>>[];
-  for (int i = 0; i < n; i++) {
-    final b = i < boxes.length ? boxes[i] : <double>[0.0, 0.0, 0.0, 0.0];
-    final s = i < scores.length ? scores[i] : 0.0;
-    final c = i < classes.length ? classes[i] : 0.0;
-    out.add([
-      (b[0]).toDouble(),
-      (b[1]).toDouble(),
-      (b[2]).toDouble(),
-      (b[3]).toDouble(),
-      s.toDouble(),
-      c.toDouble(),
-    ]);
+  final S = pred.length;
+  final E = pred.first.length;
+  final clsStart = hasObjectness ? 5 : 4;
+  final C = (E - clsStart).clamp(0, 10000);
+
+  // 3) Extract boxes and scores
+  final boxes = List.generate(S, (i) => pred[i].sublist(0, 4));
+  final objList = hasObjectness ? pred.map((r) => _sigmoid(r[4])).toList() : List<double>.filled(S, 1.0);
+  final scores = List<double>.filled(S, 0.0);
+  final clsIds = List<double>.filled(S, 0.0);
+
+  for (int i = 0; i < S; i++) {
+    // class scores
+    double best = -1e9;
+    int bestId = 0;
+    for (int k = 0; k < C; k++) {
+      final p = _sigmoid(pred[i][clsStart + k]);
+      if (p > best) {
+        best = p;
+        bestId = k;
+      }
+    }
+    final s = best * objList[i];
+    scores[i] = s;
+    clsIds[i] = bestId.toDouble();
   }
-  return out;
+
+  // 4) Convert (cx,cy,w,h) in 640-space to corners, then undo letterbox to source image
+  final dets = <List<double>>[];
+  for (int i = 0; i < S; i++) {
+    if (scores[i] < scoreThresh) continue;
+    final cx = boxes[i][0];
+    final cy = boxes[i][1];
+    final w = boxes[i][2];
+    final h = boxes[i][3];
+    double x1 = cx - w / 2.0;
+    double y1 = cy - h / 2.0;
+    double x2 = cx + w / 2.0;
+    double y2 = cy + h / 2.0;
+    // Undo padding/scale
+    x1 = (x1 - padX) / scale;
+    y1 = (y1 - padY) / scale;
+    x2 = (x2 - padX) / scale;
+    y2 = (y2 - padY) / scale;
+    // clip
+    x1 = x1.clamp(0.0, imgW.toDouble());
+    y1 = y1.clamp(0.0, imgH.toDouble());
+    x2 = x2.clamp(0.0, imgW.toDouble());
+    y2 = y2.clamp(0.0, imgH.toDouble());
+    dets.add([x1, y1, x2, y2, scores[i], clsIds[i]]);
+  }
+
+  // 5) NMS per class
+  return _nmsPerClass(dets, iouThresh: 0.45);
 }
 
 List<List<double>> _rows2D(dynamic v) {
@@ -374,4 +477,49 @@ List<double> _vector1D(dynamic v) {
     return cur.cast<num>().map((e) => e.toDouble()).toList();
   }
   return const [];
+}
+
+// ---------- Math / utils ----------
+
+double _sigmoid(double x) => 1.0 / (1.0 + math.exp(-x));
+
+double _iou(List<double> a, List<double> b) {
+  final ax1 = a[0], ay1 = a[1], ax2 = a[2], ay2 = a[3];
+  final bx1 = b[0], by1 = b[1], bx2 = b[2], by2 = b[3];
+  final interX1 = ax1 > bx1 ? ax1 : bx1;
+  final interY1 = ay1 > by1 ? ay1 : by1;
+  final interX2 = ax2 < bx2 ? ax2 : bx2;
+  final interY2 = ay2 < by2 ? ay2 : by2;
+  final iw = (interX2 - interX1).clamp(0.0, double.infinity);
+  final ih = (interY2 - interY1).clamp(0.0, double.infinity);
+  final inter = iw * ih;
+  final areaA = (ax2 - ax1).clamp(0.0, double.infinity) * (ay2 - ay1).clamp(0.0, double.infinity);
+  final areaB = (bx2 - bx1).clamp(0.0, double.infinity) * (by2 - by1).clamp(0.0, double.infinity);
+  final union = areaA + areaB - inter;
+  if (union <= 0) return 0.0;
+  return inter / union;
+}
+
+List<List<double>> _nmsPerClass(List<List<double>> dets, {double iouThresh = 0.45}) {
+  // Group by class id
+  final Map<int, List<List<double>>> byCls = {};
+  for (final d in dets) {
+    final c = d[5].round();
+    byCls.putIfAbsent(c, () => []).add(d);
+  }
+  final kept = <List<double>>[];
+  byCls.forEach((_, list) {
+    // sort by score desc
+    list.sort((a, b) => b[4].compareTo(a[4]));
+    final suppress = List<bool>.filled(list.length, false);
+    for (int i = 0; i < list.length; i++) {
+      if (suppress[i]) continue;
+      kept.add(list[i]);
+      for (int j = i + 1; j < list.length; j++) {
+        if (suppress[j]) continue;
+        if (_iou(list[i], list[j]) > iouThresh) suppress[j] = true;
+      }
+    }
+  });
+  return kept;
 }
