@@ -40,6 +40,7 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
   final int inputWidth;
   final int inputHeight;
   double scoreThreshold;
+
   /// True if head layout is [cx,cy,w,h, obj?, class1..C]. Default true.
   final bool hasObjectness;
   final Map<int, String>? classLabels; // optional mapping id -> label
@@ -68,7 +69,9 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     // Init ORT env if not already.
     ort.OrtEnv.instance.init();
     final opts = ort.OrtSessionOptions()
-      ..setSessionGraphOptimizationLevel(ort.GraphOptimizationLevel.ortEnableAll)
+      ..setSessionGraphOptimizationLevel(
+        ort.GraphOptimizationLevel.ortEnableAll,
+      )
       ..setIntraOpNumThreads(1)
       ..appendCPUProvider(ort.CPUFlags.useArena);
 
@@ -85,7 +88,10 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
   }
 
   @override
-  Future<List<FaceMaskResult>> detect(CameraImage image, int rotationDegrees) async {
+  Future<List<FaceMaskResult>> detect(
+    CameraImage image,
+    int rotationDegrees,
+  ) async {
     if (!_loaded) {
       throw StateError('OnnxFaceMaskEngine not loaded. Call load() first.');
     }
@@ -104,8 +110,22 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     final padY = ((inputHeight - newH) / 2).floor();
 
     final resized = _resizeRGB(rgb, srcW, srcH, newW, newH);
-    final letterboxed = _padRGB(resized, newW, newH, inputWidth, inputHeight, padX, padY, fill: 114);
-    final floatNHWC = _toFloatNHWC(letterboxed, inputWidth, inputHeight, scale: 1 / 255.0);
+    final letterboxed = _padRGB(
+      resized,
+      newW,
+      newH,
+      inputWidth,
+      inputHeight,
+      padX,
+      padY,
+      fill: 114,
+    );
+    final floatNHWC = _toFloatNHWC(
+      letterboxed,
+      inputWidth,
+      inputHeight,
+      scale: 1 / 255.0,
+    );
     final floatNCHW = _toFloatNCHW(floatNHWC, inputWidth, inputHeight);
 
     final inputName = _inputs.first;
@@ -114,20 +134,24 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     List<ort.OrtValue?>? outputs;
     // Try NHWC first, then NCHW (some exports keep channels-last).
     try {
-      final inp = ort.OrtValueTensor.createTensorWithDataList(
-        floatNHWC,
-        [1, inputHeight, inputWidth, 3],
-      );
+      final inp = ort.OrtValueTensor.createTensorWithDataList(floatNHWC, [
+        1,
+        inputHeight,
+        inputWidth,
+        3,
+      ]);
       final Map<String, ort.OrtValue> feed = {inputName: inp};
       outputs = _session!.run(runOptions, feed);
       inp.release();
     } catch (_) {
       // Try NCHW
       try {
-        final inp = ort.OrtValueTensor.createTensorWithDataList(
-          floatNCHW,
-          [1, 3, inputHeight, inputWidth],
-        );
+        final inp = ort.OrtValueTensor.createTensorWithDataList(floatNCHW, [
+          1,
+          3,
+          inputHeight,
+          inputWidth,
+        ]);
         final Map<String, ort.OrtValue> feed = {inputName: inp};
         outputs = _session!.run(runOptions, feed);
         inp.release();
@@ -142,16 +166,18 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
     }
 
     // --- 2) Decode YOLO-style outputs into [x1,y1,x2,y2,score,cls] (pixels in src space) ---
-    final dets = _decodeYoloDetections(outputs,
-        imgW: srcW,
-        imgH: srcH,
-        inputW: inputWidth,
-        inputH: inputHeight,
-        padX: padX,
-        padY: padY,
-        scale: scale,
-        hasObjectness: hasObjectness,
-        scoreThresh: scoreThreshold);
+    final dets = _decodeYoloDetections(
+      outputs,
+      imgW: srcW,
+      imgH: srcH,
+      inputW: inputWidth,
+      inputH: inputHeight,
+      padX: padX,
+      padY: padY,
+      scale: scale,
+      hasObjectness: hasObjectness,
+      scoreThresh: scoreThreshold,
+    );
     for (final o in outputs) {
       try {
         o?.release();
@@ -180,11 +206,13 @@ class OnnxFaceMaskEngine implements FaceMaskEngine {
       final t = ny1.clamp(0.0, 1.0).toDouble();
 
       final label = classLabels?[cls] ?? 'class-$cls';
-      results.add(FaceMaskResult(
-        box: Rect.fromLTWH(l, t, w, h),
-        label: label,
-        score: score.clamp(0.0, 1.0).toDouble(),
-      ));
+      results.add(
+        FaceMaskResult(
+          box: Rect.fromLTWH(l, t, w, h),
+          label: label,
+          score: score.clamp(0.0, 1.0).toDouble(),
+        ),
+      );
     }
     return results;
   }
@@ -230,9 +258,18 @@ Uint8List _yuv420ToRGB(CameraImage image) {
       int r = (yf + 1.402 * vf).round();
       int g = (yf - 0.344136 * uf - 0.714136 * vf).round();
       int b = (yf + 1.772 * uf).round();
-      if (r < 0) r = 0; else if (r > 255) r = 255;
-      if (g < 0) g = 0; else if (g > 255) g = 255;
-      if (b < 0) b = 0; else if (b > 255) b = 255;
+      if (r < 0)
+        r = 0;
+      else if (r > 255)
+        r = 255;
+      if (g < 0)
+        g = 0;
+      else if (g > 255)
+        g = 255;
+      if (b < 0)
+        b = 0;
+      else if (b > 255)
+        b = 255;
 
       out[o++] = r;
       out[o++] = g;
@@ -365,7 +402,10 @@ List<List<double>> _decodeYoloDetections(
     for (final o in outs) {
       if (o == null) continue;
       final rows = _rows2D(o.value);
-      if (rows.isNotEmpty) { mat = rows; break; }
+      if (rows.isNotEmpty) {
+        mat = rows;
+        break;
+      }
     }
   }
   mat ??= const <List<double>>[];
@@ -396,7 +436,9 @@ List<List<double>> _decodeYoloDetections(
 
   // 3) Extract boxes and scores
   final boxes = List.generate(S, (i) => pred[i].sublist(0, 4));
-  final objList = hasObjectness ? pred.map((r) => _sigmoid(r[4])).toList() : List<double>.filled(S, 1.0);
+  final objList = hasObjectness
+      ? pred.map((r) => _sigmoid(r[4])).toList()
+      : List<double>.filled(S, 1.0);
   final scores = List<double>.filled(S, 0.0);
   final clsIds = List<double>.filled(S, 0.0);
 
@@ -493,14 +535,21 @@ double _iou(List<double> a, List<double> b) {
   final iw = (interX2 - interX1).clamp(0.0, double.infinity);
   final ih = (interY2 - interY1).clamp(0.0, double.infinity);
   final inter = iw * ih;
-  final areaA = (ax2 - ax1).clamp(0.0, double.infinity) * (ay2 - ay1).clamp(0.0, double.infinity);
-  final areaB = (bx2 - bx1).clamp(0.0, double.infinity) * (by2 - by1).clamp(0.0, double.infinity);
+  final areaA =
+      (ax2 - ax1).clamp(0.0, double.infinity) *
+      (ay2 - ay1).clamp(0.0, double.infinity);
+  final areaB =
+      (bx2 - bx1).clamp(0.0, double.infinity) *
+      (by2 - by1).clamp(0.0, double.infinity);
   final union = areaA + areaB - inter;
   if (union <= 0) return 0.0;
   return inter / union;
 }
 
-List<List<double>> _nmsPerClass(List<List<double>> dets, {double iouThresh = 0.45}) {
+List<List<double>> _nmsPerClass(
+  List<List<double>> dets, {
+  double iouThresh = 0.45,
+}) {
   // Group by class id
   final Map<int, List<List<double>>> byCls = {};
   for (final d in dets) {
