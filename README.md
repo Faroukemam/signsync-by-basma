@@ -31,5 +31,5 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 - Omar Zakaria
 - Karim Zakaria 
 - Islam Wagih 
-- Karim 👀
+- Karim Mohamed
 
