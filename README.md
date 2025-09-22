@@ -27,7 +27,7 @@ Translate Sign Language ↔ Egyptian Arabic in real time using AI-powered vision
 </p>
 
 ## 👥 Contributors
-- Farouk Emam
+- Farouk waked
 - Omar Zakaria
 - Karim Zakaria 
 - Islam Wagih 
